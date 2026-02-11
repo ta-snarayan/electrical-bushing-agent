@@ -1,20 +1,56 @@
-# Hitachi Energy Bushing Data Collector
+# Electrical Bushing Data Collection System
 
-A web scraping system to collect electrical bushing cross-reference information from the Hitachi Energy website.
+A comprehensive multi-website data collection system for electrical bushing cross-reference information.
 
 ## Overview
 
-This tool scrapes bushing data from the Hitachi Energy Bushing Cross Reference website and saves the information to a CSV file. It extracts key information including original bushing manufacturer, catalog numbers, and ABB replacement style numbers.
+This project collects electrical bushing cross-reference data from multiple manufacturer and distributor websites. Each website has its own dedicated scraper module organized in separate directories for maintainability and scalability.
 
-## Features
+## Project Structure
 
-- Scrapes bushing cross-reference data from Hitachi Energy website
-- Parses pseudo-table HTML structures to extract structured data
-- Saves data to CSV format with standardized column names
-- **Saves raw HTML responses for archival and debugging purposes**
-- Handles errors gracefully with detailed logging
-- Supports incremental data collection (appends to existing CSV)
-- Batch processing support for multiple indices
+```
+data_collection/
+├── hitachi_website_data_collection/        # Hitachi Energy website scraper
+│   ├── hitachi_website_data_scraper.py
+│   ├── hitachi_website_data_batch_scraper.py
+│   ├── hitachi_website_bushing_master_list.csv
+│   ├── hitachi_website_scraping_error_log.csv
+│   ├── hitachi_website_data_raw/
+│   └── README.md
+├── pcore_website_data_collection/          # PCORE website scraper (future)
+├── <other_website>_data_collection/        # Additional scrapers (future)
+└── requirements.txt                        # Shared Python dependencies
+```
+
+## Available Data Collectors
+
+### ✅ Hitachi Energy Bushing Cross-Reference
+
+**Status**: Fully operational (v2.0)  
+**Location**: `hitachi_website_data_collection/`  
+**Test Results**: 89% success rate (89/100 indices), 11 empty pages  
+**Features**:
+- Comprehensive error handling with CSV logging
+- Raw HTML archival
+- Batch processing (1-50,000+ indices)
+- Detailed documentation
+
+**Quick Start**:
+```powershell
+cd hitachi_website_data_collection
+python hitachi_website_data_batch_scraper.py --start 1 --end 100 --delay 0.5
+```
+
+**Documentation**: See [hitachi_website_data_collection/README.md](hitachi_website_data_collection/README.md)
+
+### 🔜 PCORE Website (Coming Soon)
+
+**Status**: Planned  
+**Location**: `pcore_website_data_collection/` (to be created)
+
+### 🔜 Additional Websites (Coming Soon)
+
+Additional manufacturer and distributor websites will be added following the same organizational pattern.
 
 ## Installation
 
@@ -22,6 +58,7 @@ This tool scrapes bushing data from the Hitachi Energy Bushing Cross Reference w
 
 - Python 3.8 or higher
 - pip package manager
+- Internet connection
 
 ### Setup
 
@@ -30,296 +67,204 @@ This tool scrapes bushing data from the Hitachi Energy Bushing Cross Reference w
 cd data_collection
 ```
 
-2. Install required dependencies:
+2. Install shared dependencies:
 ```powershell
 pip install -r requirements.txt
 ```
 
-## Usage
-
-### Basic Usage
-
-Run the scraper with a bushing index number:
-
+3. Navigate to the specific website collector you want to use:
 ```powershell
-python scraper.py <index>
+cd hitachi_website_data_collection
 ```
 
-### Examples
+4. Follow the specific README for usage instructions
 
-Scrape data for index 42131:
-```powershell
-python scraper.py 42131
-```
+## Shared Dependencies
 
-Scrape data for index 42246:
+All website collectors use the following shared dependencies (defined in `requirements.txt`):
+
+- **requests 2.31.0**: HTTP client with browser-like headers
+- **beautifulsoup4 4.12.3**: HTML parsing and data extraction
+- **lxml 5.1.0**: Fast XML and HTML parser
+- **pandas 2.2.0**: CSV operations and data management
+
+## Design Principles
+
+### Modular Organization
+
+Each website scraper is organized in its own directory with:
+- Self-contained Python modules
+- Dedicated output files with website-specific prefixes
+- Independent documentation
+- Isolated raw data storage
+- Separate error logs
+
+### Naming Convention
+
+All files follow a consistent naming pattern:
+- Python modules: `<website>_data_scraper.py`, `<website>_data_batch_scraper.py`
+- Output CSV: `<website>_bushing_master_list.csv`
+- Error log: `<website>_scraping_error_log.csv`
+- Raw data directory: `<website>_data_raw/`
+- Documentation: `README.md` within each directory
+
+### Shared Features
+
+All scrapers implement:
+- ✅ CSV output with standardized column structure
+- ✅ Raw HTML archival for debugging and re-parsing
+- ✅ Comprehensive error handling and logging
+- ✅ Batch processing capabilities
+- ✅ Progress tracking and summary statistics
+- ✅ Configurable request delays
+- ✅ Detailed logging (INFO/WARNING/ERROR levels)
+
+## Usage Patterns
+
+### Single Index Scraping
+
 ```powershell
-python scraper.py 42246
+cd <website>_data_collection
+python <website>_data_scraper.py <index>
 ```
 
 ### Batch Scraping
 
-For scraping multiple indices, use the batch scraper:
-
-**Scrape a range of indices:**
 ```powershell
-python batch_scraper.py --start 1 --end 10
+cd <website>_data_collection
+python <website>_data_batch_scraper.py --start <start> --end <end> --delay <delay>
 ```
 
-**Scrape specific indices:**
+### Error Analysis
+
+After a large batch run, check the error log:
 ```powershell
-python batch_scraper.py --indices 42131,42246,50000
+# View error summary
+Get-Content <website>_scraping_error_log.csv | Select-Object -First 20
+
+# Count errors by type
+Import-Csv <website>_scraping_error_log.csv | Group-Object Error_Type | Select-Object Name, Count
 ```
-
-**Scrape from a file (one index per line):**
-```powershell
-python batch_scraper.py --file indices.txt
-```
-
-**Custom delay between requests:**
-```powershell
-python batch_scraper.py --start 1 --end 100 --delay 2.0
-```
-
-#### Creating an Index File
-
-Create a text file `indices.txt` with one index per line:
-```
-42131
-42246
-50000
-# This is a comment - lines starting with # are ignored
-65432
-```
-
-Then run:
-```powershell
-python batch_scraper.py --file indices.txt
-```
-
-### Output
-
-The scraper will:
-1. Fetch data from: `https://bushing.hitachienergy.com/Scripts/BushingCrossReferenceBU.asp?INDEX=<index>`
-2. **Save raw HTML response** to: `bushing_raw_data/cross_reference_data/Hitachi_website_bushing_<index>.html`
-3. Extract the following fields:
-   - Website Index
-   - Original Bushing Manufacturer
-   - Original Catalog Number
-   - Replacement Bushing Manufacturer (defaults to "ABB")
-   - ABB Style Number
-4. Save/append the data to: `master_bushing_list_from_hitachi_website.csv`
-
-### Output Files
-
-**CSV Data File:**
-- Location: `master_bushing_list_from_hitachi_website.csv`
-- Format: Comma-separated values with headers
-- Purpose: Structured data extraction for analysis
-
-**Raw HTML Files:**
-- Location: `bushing_raw_data/cross_reference_data/Hitachi_website_bushing_<index>.html`
-- Format: Original HTML from website
-- Purpose: 
-  - Archive original source data
-  - Enable re-parsing if scraper logic needs updates
-  - Debug data extraction issues
-  - Verify scraped data accuracy
-  - Maintain data provenance
-
-### Output Format
-
-The CSV file contains the following columns:
-
-| Column | Description | Source |
-|--------|-------------|--------|
-| Website Index | The index number from the URL | Input parameter |
-| Original Bushing Information - Original Bushing Manufacturer | Manufacturer of the original bushing | Scraped from website |
-| Original Bushing Information - Catalog Number | Original catalog number | Scraped from website |
-| Replacement Information - Replacement Bushing Manufacturer | Replacement manufacturer | Default: "ABB" |
-| Replacement Information - ABB Style Number | ABB replacement style number | Scraped from website |
-
-### Example Output
-
-```csv
-Website Index,Original Bushing Information - Original Bushing Manufacturer,Original Bushing Information - Catalog Number,Replacement Information - Replacement Bushing Manufacturer,Replacement Information - ABB Style Number
-42131,ABB,138W0800XA,ABB,138N0812BA
-42246,<Manufacturer>,<Catalog>,ABB,<Style Number>
-```
-
-## Logging
-
-The scraper provides detailed logging information:
-- INFO: Successful operations and progress updates
-- WARNING: Missing fields or data quality issues
-- ERROR: Failed requests or parsing errors
-
-Logs are displayed in the console during execution.
-
-## Error Handling
-
-The scraper handles various error conditions:
-- **Network Errors**: Timeout, connection refused, DNS failures
-- **Invalid Index**: Non-existent index numbers return appropriate warnings
-- **Missing Data**: Fields that cannot be found are logged as warnings
-- **Parsing Errors**: HTML structure changes are caught and logged
-
-## Technical Details
-
-### Dependencies
-
-- **requests**: HTTP requests to fetch webpage content
-- **beautifulsoup4**: HTML parsing and data extraction
-- **lxml**: Fast XML and HTML parser
-- **pandas**: CSV file operations and data management
-
-### Architecture
-
-The scraper consists of several key components:
-
-#### Core Scraper (scraper.py)
-
-**Functions:**
-1. `scrape_bushing_data(index)`: Main orchestration function
-2. `save_raw_html(html_content, index, directory)`: Save raw HTML to file
-3. `parse_bushing_info(soup, index)`: Extracts structured data from HTML
-4. `extract_field_value(text, label)`: Generic field extraction
-5. `extract_catalog_number(soup, text)`: Specialized catalog number extraction
-6. `extract_abb_style_number(soup, text)`: Specialized ABB style number extraction
-7. `save_to_csv(data, filepath)`: CSV file operations
-
-#### Batch Scraper (batch_scraper.py)
-
-**Functions:**
-1. `scrape_range(start, end, delay)`: Scrape consecutive index range
-2. `scrape_list(indices, delay)`: Scrape specific list of indices
-3. `scrape_from_file(filepath, delay)`: Read indices from file and scrape
-
-**Features:**
-- Progress tracking with success/failure counts
-- Configurable delay between requests
-- Support for multiple input methods (range, list, file)
-- Detailed logging and summary statistics
-
-### Data Extraction Strategy
-
-The website uses a pseudo-table layout with:
-- Label-value pairs separated by visual dividers
-- Section-based organization (Original vs. Replacement info)
-- Clickable links for certain fields
-
-The parser:
-1. Extracts all text content from the webpage
-2. Identifies sections by text markers
-3. Uses label-based searching within sections
-4. Falls back to link extraction for style numbers
-5. Validates extracted data before saving
 
 ## Testing & Validation
 
-The scraper has been thoroughly tested and validated against the Hitachi Energy website. See [test_results.md](test_results.md) for detailed test results.
+### Hitachi Energy
 
-### Test Summary
+- **Test Range**: Indices 1-100
+- **Success Rate**: 89% (89 valid, 11 empty pages)
+- **Test Date**: February 10, 2026
+- **Status**: ✅ Production ready
 
-- ✅ **Test Range:** Indices 1-10
-- ✅ **Success Rate:** 100% (10/10)
-- ✅ **Accuracy:** Perfect match across all fields
-- ✅ **Date Validated:** February 10, 2026
+See [hitachi_website_data_collection/README.md](hitachi_website_data_collection/README.md) for detailed test results.
 
-The scraper correctly handles:
-- Multiple manufacturer formats (PCORE, LAPP, WEST, G.E., ABB)
-- Various catalog number formats
-- Different ABB style number patterns
-- Empty or missing field values
+## Adding New Website Collectors
 
-### Quick Validation
+To add a new website collector:
 
-To verify the scraper is working correctly:
-
-1. Test with known index (42131):
-```powershell
-python scraper.py 42131
-```
-
-2. Check the output CSV file exists:
-```powershell
-ls master_bushing_list_from_hitachi_website.csv
-```
-
-3. Verify the data matches expected values:
-   - Manufacturer: ABB
-   - Catalog Number: 138W0800XA
-   - ABB Style Number: 138N0812BA
-
-### Batch Testing
-
-To test multiple indices at once:
-```powershell
-for ($i=1; $i -le 10; $i++) { python scraper.py $i; Start-Sleep -Seconds 1 }
-```
+1. Create a new directory: `<website>_data_collection/`
+2. Copy the template structure from `hitachi_website_data_collection/`
+3. Update all file names with the new website prefix
+4. Modify the scraper logic for the target website
+5. Update constants (BASE_URL, OUTPUT_CSV, etc.)
+6. Test thoroughly and document
+7. Update this README with the new collector
 
 ## Troubleshooting
 
 ### Common Issues
 
-**Issue**: "Failed to fetch data"
-- **Solution**: Check internet connection and verify the website is accessible
+**Issue**: Import errors when running scrapers  
+**Solution**: Install requirements: `pip install -r requirements.txt`
 
-**Issue**: "Missing Original Bushing Manufacturer"
-- **Solution**: This is normal for some indices where the manufacturer field is empty on the website; the field will be blank in the CSV
+**Issue**: Files not found  
+**Solution**: Ensure you're in the correct website directory: `cd <website>_data_collection`
 
-**Issue**: "No valid data found"
-- **Solution**: The index may not exist, or the website structure may have changed
+**Issue**: Permission denied  
+**Solution**: Run PowerShell as administrator or check file permissions
 
-## Future Enhancements
+**Issue**: Network timeouts  
+**Solution**: Increase delay between requests or check internet connection
 
-Potential improvements for future versions:
-- ~~Batch processing: Accept multiple indices in one run~~ ✅ **Added in v1.1** (see batch_scraper.py)
-- Duplicate detection: Skip already-scraped indices
-- Parallel scraping: Process multiple indices simultaneously
-- GUI interface: User-friendly interface for non-technical users
-- Auto-retry: Automatic retry on network failures
-- Data validation: Enhanced validation rules for data quality
-- Database support: Option to save to database instead of CSV
+### Getting Help
 
-## Files in This Project
+1. Check the specific website collector's README
+2. Review error logs: `<website>_scraping_error_log.csv`
+3. Check Python logs in console output
+4. Verify internet connectivity to target website
 
-- **scraper.py** - Main single-index scraper with raw HTML storage
-- **batch_scraper.py** - Batch processing scraper for multiple indices
-- **requirements.txt** - Python package dependencies
-- **README.md** - This documentation file
-- **test_results.md** - Detailed test results and validation report
-- **master_bushing_list_from_hitachi_website.csv** - Output CSV file (created after first run)
-- **bushing_raw_data/cross_reference_data/** - Directory containing raw HTML files (auto-created)
+## Performance Considerations
+
+### Request Delays
+
+- **Minimum recommended**: 0.5 seconds between requests
+- **Conservative**: 1.0-2.0 seconds for large batches
+- **Rationale**: Be respectful to target servers, avoid rate limiting
+
+### Large-Scale Operations
+
+For processing thousands of indices:
+- Use batch scraper with appropriate delays
+- Monitor error logs for patterns
+- Consider running during off-peak hours
+- Save progress incrementally (CSV appends automatically)
+
+### Resource Usage
+
+- **Memory**: Minimal (~50-100 MB per scraper instance)
+- **Disk**: ~20 KB per raw HTML file
+- **Network**: ~30 KB download per index
+
+## Data Management
+
+### Output Organization
+
+Each website collector produces:
+- **Structured CSV**: Main data file for analysis
+- **Raw HTML**: Archive of original source data
+- **Error Log**: CSV tracking all failures
+
+### Data Retention
+
+- Raw HTML files enable re-parsing if scraper logic improves
+- Error logs allow retry of failed indices
+- CSV files support incremental updates (append mode)
+
+### Backup Recommendations
+
+Regular backups of:
+- CSV output files (master lists)
+- Error logs (for analysis and retry)
+- Raw HTML directories (if re-parsing needed)
 
 ## Version History
-2** (February 10, 2026)
-- Added raw HTML storage for data archival and debugging
-- Automatically saves HTML responses to `bushing_raw_data/cross_reference_data/`
-- Enhanced documentation with raw data file information
 
-**v1.
-**v1.1** (February 10, 2026)
-- Added batch_scraper.py for processing multiple indices
-- Comprehensive testing with indices 1-10 (100% success rate)
-- Updated documentation with test results
-- Enhanced error handling for empty fields
+**v2.0** (February 10, 2026)
+- Major reorganization for multi-website support
+- Modular directory structure
+- Consistent naming convention across all files
+- Prepared for PCORE and additional website collectors
 
-**v1.0** (February 10, 2026)
-- Initial release
-- Single-index scraping
-- CSV output with proper column formatting
-- Browser-like headers for anti-bot bypass
-- Comprehensive logging
+**v1.3** (February 10, 2026)
+- Added comprehensive error handling with CSV logging
+- Support for large-scale automation (50,000+ indices)
+- Tested with Hitachi indices 1-100
+
+**v1.0-1.2** (February 10, 2026)
+- Initial Hitachi Energy scraper development
+- Raw HTML storage implementation
+- Batch processing capabilities
 
 ## License
 
-Internal use only - Hitachi Energy Bushing Data Collection System
+Internal use only - Electrical Bushing Data Collection System
 
 ## Contact
 
-For issues or questions, contact the development team.
+For issues, questions, or to contribute new website collectors, contact the development team.
 
 ---
 
-**Last Updated**: February 10, 2026
+**Last Updated**: February 10, 2026  
+**System Version**: 2.0  
+**Active Collectors**: 1 (Hitachi Energy)  
+**Planned Collectors**: PCORE, additional manufacturers
