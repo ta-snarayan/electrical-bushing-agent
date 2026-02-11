@@ -2,21 +2,25 @@
 Batch Bushing Data Scraper
 
 This script allows scraping multiple bushing indices in one run, with configurable
-delay between requests to be respectful to the server.
+delay between requests to be respectful to the server. Features robust error handling
+and logging for large-scale automation (supports 1 to 50,000+ indices).
 
 Usage:
     python batch_scraper.py --start 1 --end 10
+    python batch_scraper.py --start 1 --end 50000 --delay 0.5
     python batch_scraper.py --indices 42131,42246,50000
     python batch_scraper.py --file indices.txt
 
 Author: Data Collection System
 Date: February 10, 2026
+Version: 1.3
 """
 
 import argparse
 import time
 import sys
-from scraper import scrape_bushing_data, save_to_csv, logger
+import os
+from scraper import scrape_bushing_data, save_to_csv, logger, ERROR_LOG_CSV
 
 
 def scrape_range(start: int, end: int, delay: float = 1.0):
@@ -57,13 +61,23 @@ def scrape_range(start: int, end: int, delay: float = 1.0):
             time.sleep(delay)
     
     logger.info(f"Batch scrape completed: {success_count} successful, {failure_count} failed")
-    print(f"\n{'='*60}")
+    print(f"\n{'='*70}")
     print(f"Batch Scraping Complete")
-    print(f"{'='*60}")
+    print(f"{'='*70}")
+    print(f"Index Range: {start} to {end}")
     print(f"Total Processed: {total}")
     print(f"Successful: {success_count}")
     print(f"Failed: {failure_count}")
     print(f"Success Rate: {(success_count/total)*100:.1f}%")
+    
+    # Check if error log exists and inform user
+    if failure_count > 0 and os.path.exists(ERROR_LOG_CSV):
+        print(f"\n⚠  Errors logged to: {ERROR_LOG_CSV}")
+        print(f"   Review this file for details on {failure_count} failed indices")
+    
+    if success_count > 0:
+        print(f"\n✓ Data saved to: master_bushing_list_from_hitachi_website.csv")
+        print(f"✓ Raw HTML saved to: bushing_raw_data/cross_reference_data/")
 
 
 def scrape_list(indices: list, delay: float = 1.0):
@@ -103,13 +117,22 @@ def scrape_list(indices: list, delay: float = 1.0):
             time.sleep(delay)
     
     logger.info(f"Batch scrape completed: {success_count} successful, {failure_count} failed")
-    print(f"\n{'='*60}")
+    print(f"\n{'='*70}")
     print(f"Batch Scraping Complete")
-    print(f"{'='*60}")
+    print(f"{'='*70}")
     print(f"Total Processed: {total}")
     print(f"Successful: {success_count}")
     print(f"Failed: {failure_count}")
     print(f"Success Rate: {(success_count/total)*100:.1f}%")
+    
+    # Check if error log exists and inform user
+    if failure_count > 0 and os.path.exists(ERROR_LOG_CSV):
+        print(f"\n⚠  Errors logged to: {ERROR_LOG_CSV}")
+        print(f"   Review this file for details on {failure_count} failed indices")
+    
+    if success_count > 0:
+        print(f"\n✓ Data saved to: master_bushing_list_from_hitachi_website.csv")
+        print(f"✓ Raw HTML saved to: bushing_raw_data/cross_reference_data/")
 
 
 def scrape_from_file(filepath: str, delay: float = 1.0):

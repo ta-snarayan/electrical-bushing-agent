@@ -11,8 +11,10 @@ This tool scrapes bushing data from the Hitachi Energy Bushing Cross Reference w
 - Scrapes bushing cross-reference data from Hitachi Energy website
 - Parses pseudo-table HTML structures to extract structured data
 - Saves data to CSV format with standardized column names
+- **Saves raw HTML responses for archival and debugging purposes**
 - Handles errors gracefully with detailed logging
 - Supports incremental data collection (appends to existing CSV)
+- Batch processing support for multiple indices
 
 ## Installation
 
@@ -99,13 +101,31 @@ python batch_scraper.py --file indices.txt
 
 The scraper will:
 1. Fetch data from: `https://bushing.hitachienergy.com/Scripts/BushingCrossReferenceBU.asp?INDEX=<index>`
-2. Extract the following fields:
+2. **Save raw HTML response** to: `bushing_raw_data/cross_reference_data/Hitachi_website_bushing_<index>.html`
+3. Extract the following fields:
    - Website Index
    - Original Bushing Manufacturer
    - Original Catalog Number
    - Replacement Bushing Manufacturer (defaults to "ABB")
    - ABB Style Number
-3. Save/append the data to: `master_bushing_list_from_hitachi_website.csv`
+4. Save/append the data to: `master_bushing_list_from_hitachi_website.csv`
+
+### Output Files
+
+**CSV Data File:**
+- Location: `master_bushing_list_from_hitachi_website.csv`
+- Format: Comma-separated values with headers
+- Purpose: Structured data extraction for analysis
+
+**Raw HTML Files:**
+- Location: `bushing_raw_data/cross_reference_data/Hitachi_website_bushing_<index>.html`
+- Format: Original HTML from website
+- Purpose: 
+  - Archive original source data
+  - Enable re-parsing if scraper logic needs updates
+  - Debug data extraction issues
+  - Verify scraped data accuracy
+  - Maintain data provenance
 
 ### Output Format
 
@@ -161,11 +181,12 @@ The scraper consists of several key components:
 
 **Functions:**
 1. `scrape_bushing_data(index)`: Main orchestration function
-2. `parse_bushing_info(soup, index)`: Extracts structured data from HTML
-3. `extract_field_value(text, label)`: Generic field extraction
-4. `extract_catalog_number(soup, text)`: Specialized catalog number extraction
-5. `extract_abb_style_number(soup, text)`: Specialized ABB style number extraction
-6. `save_to_csv(data, filepath)`: CSV file operations
+2. `save_raw_html(html_content, index, directory)`: Save raw HTML to file
+3. `parse_bushing_info(soup, index)`: Extracts structured data from HTML
+4. `extract_field_value(text, label)`: Generic field extraction
+5. `extract_catalog_number(soup, text)`: Specialized catalog number extraction
+6. `extract_abb_style_number(soup, text)`: Specialized ABB style number extraction
+7. `save_to_csv(data, filepath)`: CSV file operations
 
 #### Batch Scraper (batch_scraper.py)
 
@@ -263,15 +284,21 @@ Potential improvements for future versions:
 
 ## Files in This Project
 
-- **scraper.py** - Main single-index scraper
+- **scraper.py** - Main single-index scraper with raw HTML storage
 - **batch_scraper.py** - Batch processing scraper for multiple indices
 - **requirements.txt** - Python package dependencies
 - **README.md** - This documentation file
 - **test_results.md** - Detailed test results and validation report
 - **master_bushing_list_from_hitachi_website.csv** - Output CSV file (created after first run)
+- **bushing_raw_data/cross_reference_data/** - Directory containing raw HTML files (auto-created)
 
 ## Version History
+2** (February 10, 2026)
+- Added raw HTML storage for data archival and debugging
+- Automatically saves HTML responses to `bushing_raw_data/cross_reference_data/`
+- Enhanced documentation with raw data file information
 
+**v1.
 **v1.1** (February 10, 2026)
 - Added batch_scraper.py for processing multiple indices
 - Comprehensive testing with indices 1-10 (100% success rate)
