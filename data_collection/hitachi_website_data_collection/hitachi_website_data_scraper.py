@@ -424,13 +424,14 @@ def extract_abb_style_number(soup: BeautifulSoup, text: str) -> str:
         return ""
 
 
-def save_to_csv(data: Dict[str, str], filepath: str = OUTPUT_CSV) -> bool:
+def save_to_csv(data: Dict[str, str], filepath: str = OUTPUT_CSV, mode: str = 'append') -> bool:
     """
     Save bushing data to CSV file.
     
     Args:
         data: Dictionary containing bushing data
         filepath: Path to the CSV file
+        mode: Write mode - 'append' (add new), 'overwrite' (replace existing row with same index)
         
     Returns:
         True if successful, False otherwise
@@ -445,6 +446,12 @@ def save_to_csv(data: Dict[str, str], filepath: str = OUTPUT_CSV) -> bool:
         # Check if file exists
         try:
             existing_df = pd.read_csv(filepath)
+            
+            # In overwrite mode, remove any existing row with the same Website Index
+            if mode == 'overwrite':
+                index_to_check = data['Website Index']
+                existing_df = existing_df[existing_df['Website Index'] != int(index_to_check)]
+            
             # Append new data
             combined_df = pd.concat([existing_df, df], ignore_index=True)
             combined_df.to_csv(filepath, index=False)

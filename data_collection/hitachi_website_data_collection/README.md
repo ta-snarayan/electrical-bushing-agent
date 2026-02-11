@@ -15,8 +15,9 @@ This tool scrapes bushing data from the Hitachi Energy Bushing Cross Reference w
 - ✅ Saves data to CSV format with standardized column names
 - ✅ **Saves raw HTML responses for archival and debugging purposes**
 - ✅ **Comprehensive error handling with CSV error logging**
-- ✅ Handles large-scale automation (tested 1-100, supports up to 50,000+ indices)
-- ✅ Supports incremental data collection (appends to existing CSV)
+- ✅ Handles large-scale automation (tested 1-200, supports up to 50,000+ indices)
+- ✅ **Multiple write modes: append (skip existing), overwrite (update existing), scratch (fresh start)**
+- ✅ Intelligent duplicate detection - checks both CSV and raw HTML files
 - ✅ Batch processing support for multiple indices
 - ✅ Detailed logging and progress tracking
 
@@ -26,22 +27,23 @@ This tool scrapes bushing data from the Hitachi Energy Bushing Cross Reference w
 
 - Python 3.8 or higher
 - pip package manager
+- Anaconda environment (recommended)
 
 ### Setup
 
 1. Navigate to the hitachi_website_data_collection directory:
 ```powershell
-cd data_collection/hitachi_website_data_collection
+cd C:\Users\snarayan\Desktop\electrical-bushing-agent\data_collection\hitachi_website_data_collection
 ```
 
-2. Install required dependencies:
+2. Install required dependencies (if not already installed):
 ```powershell
 pip install -r ../requirements.txt
 ```
 
-Or from the parent data_collection directory:
+Or install individually:
 ```powershell
-pip install -r requirements.txt
+pip install requests==2.31.0 beautifulsoup4==4.12.3 lxml==5.1.0 pandas==2.2.0
 ```
 
 ## Usage
@@ -70,27 +72,55 @@ python hitachi_website_data_scraper.py 42246
 
 For scraping multiple indices, use the batch scraper:
 
-**Scrape a range of indices:**
-```powershell
-python hitachi_website_data_batch_scraper.py --start 1 --end 10
-```
+#### Write Modes
 
-**Scrape specific indices:**
-```powershell
-python hitachi_website_data_batch_scraper.py --indices 42131,42246,50000
-```
+The batch scraper supports three write modes (default is `append`):
 
-**Scrape from a file (one index per line):**
-```powershell
-python hitachi_website_data_batch_scraper.py --file indices.txt
-```
+- **`--mode append`** (default): Skips indices that already exist in both the CSV file and raw HTML folder. Perfect for incremental data collection without re-scraping existing data.
+- **`--mode overwrite`**: Overwrites existing data file-by-file. Use this to update specific indices while preserving other data.
+- **`--mode scratch`**: Deletes ALL existing data (CSV, error log, raw HTML files) and starts fresh. Use with caution!
 
-**Custom delay between requests:**
+#### Basic Examples
+
+**Scrape a range of indices (append mode - skips existing):**
 ```powershell
 python hitachi_website_data_batch_scraper.py --start 1 --end 100 --delay 0.5
 ```
 
-**Large-scale automation (tested with 1-100, supports up to 50,000+):**
+**Scrape specific indices:**
+```powershell
+python hitachi_website_data_batch_scraper.py --indices 42131,42246,50000 --delay 0.5
+```
+
+**Scrape from a file (one index per line):**
+```powershell
+python hitachi_website_data_batch_scraper.py --file indices.txt --delay 0.5
+```
+
+**Large-scale automation (tested with 1-200, supports up to 50,000+):**
+```powershell
+python hitachi_website_data_batch_scraper.py --start 1 --end 50000 --delay 0.5
+```
+
+#### Write Mode Examples
+
+**Append mode - Skip existing data (default):**
+```powershell
+python hitachi_website_data_batch_scraper.py --start 1 --end 200 --delay 0.5 --mode append
+```
+
+**Overwrite mode - Update existing entries:**
+```powershell
+python hitachi_website_data_batch_scraper.py --start 1 --end 100 --delay 0.5 --mode overwrite
+```
+
+**Scratch mode - Fresh start (deletes all existing data):**
+```powershell
+python hitachi_website_data_batch_scraper.py --start 1 --end 100 --delay 0.5 --mode scratch
+```
+```powershell
+python hitachi_website_data_batch_scraper.py --start 1 --end 50000 --delay 0.5
+```
 ```powershell
 python hitachi_website_data_batch_scraper.py --start 1 --end 50000 --delay 0.5
 ```
@@ -330,6 +360,17 @@ python hitachi_website_data_batch_scraper.py --start 1 --end 10 --delay 0.5
 
 ### Common Issues
 
+**Issue**: "Can't open file" or "No such file or directory"
+- **Solution**: Always navigate to the correct directory first:
+  ```powershell
+  cd C:\Users\snarayan\Desktop\electrical-bushing-agent\data_collection\hitachi_website_data_collection
+  ```
+
+**Issue**: "ModuleNotFoundError: No module named 'pandas'"
+- **Solution**: 
+  1. Make sure you're using the Anaconda base environment (you should see `(base)` in your prompt)
+  2. Install dependencies: `pip install pandas requests beautifulsoup4 lxml`
+
 **Issue**: "Failed to fetch data"
 - **Solution**: Check internet connection and verify the website is accessible
 
@@ -340,7 +381,7 @@ python hitachi_website_data_batch_scraper.py --start 1 --end 10 --delay 0.5
 - **Solution**: The index may not exist, or the page is empty; check `hitachi_website_scraping_error_log.csv` for details
 
 **Issue**: Error log shows many TIMEOUT errors
-- **Solution**: Increase the delay between requests or check network connectivity
+- **Solution**: Increase the delay between requests: `--delay 1.0` or check network connectivity
 
 **Issue**: HTTP_403 errors
 - **Solution**: The browser headers should prevent this; if it persists, the website may be blocking automated requests
