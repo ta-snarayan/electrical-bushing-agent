@@ -29,18 +29,28 @@ import os
 import shutil
 import pandas as pd
 from pathlib import Path
-from hitachi_website_data_scraper import scrape_bushing_data, save_to_csv, logger, ERROR_LOG_CSV, OUTPUT_CSV, RAW_DATA_DIR
+from hitachi_website_data_scraper import (
+    scrape_bushing_data, 
+    save_to_csv, 
+    logger, 
+    ERROR_LOG_CSV, 
+    OUTPUT_CSV, 
+    RAW_DATA_DIR,
+    get_error_log_indices,
+    delete_raw_html
+)
 
 
 def check_index_exists(index: int) -> bool:
     """
-    Check if an index already exists in both CSV and raw HTML files.
+    Check if an index already exists in CSV or raw HTML files.
+    Does NOT check error log (error log is checked separately).
     
     Args:
         index: The bushing index to check
         
     Returns:
-        True if the index exists in both locations, False otherwise
+        True if the index exists in CSV or HTML file; False otherwise
     """
     # Check if raw HTML file exists
     html_file = Path(RAW_DATA_DIR) / f"Hitachi_website_bushing_{index}.html"
@@ -55,7 +65,7 @@ def check_index_exists(index: int) -> bool:
         except Exception as e:
             logger.warning(f"Error checking CSV for index {index}: {e}")
     
-    return html_exists and csv_exists
+    return html_exists or csv_exists
 
 
 def clean_scratch_mode():
@@ -100,6 +110,10 @@ def scrape_range(start: int, end: int, delay: float = 1.0, mode: str = 'append')
     if mode == 'scratch':
         clean_scratch_mode()
     
+    # Load error log indices once at the start
+    error_log_indices = get_error_log_indices()
+    logger.info(f"Loaded {len(error_log_indices)} indices from error log")
+    
     total = end - start + 1
     success_count = 0
     failure_count = 0
@@ -108,11 +122,20 @@ def scrape_range(start: int, end: int, delay: float = 1.0, mode: str = 'append')
     logger.info(f"Starting batch scrape for indices {start} to {end} ({total} total) - Mode: {mode.upper()}")
     
     for i in range(start, end + 1):
+        # Check if this index is in the error log
+        if i in error_log_indices:
+            skipped_count += 1
+            # Delete HTML file if it exists
+            delete_raw_html(i)
+            logger.info(f"Skipping index {i} (in error log, HTML deleted if existed) ({i - start + 1}/{total})")
+            print(f"⊘ Index {i}: Skipped (in error log)")
+            continue
+        
         # Check if we should skip this index (append mode only)
         if mode == 'append' and check_index_exists(i):
             skipped_count += 1
             logger.info(f"Skipping index {i} (already exists) ({i - start + 1}/{total})")
-            print(f"⊘ Index {i}: Skipped (already exists)")
+            print(f"⊘ Index {i}: Skipped (already processed)")
             continue
         
         action = "Overwriting" if mode == 'overwrite' and check_index_exists(i) else "Processing"
@@ -132,7 +155,7 @@ def scrape_range(start: int, end: int, delay: float = 1.0, mode: str = 'append')
                 print(f"✗ Index {i}: Failed to save to CSV")
         else:
             failure_count += 1
-            print(f"✗ Index {i}: Failed to scrape")
+            print(f"✗ Index {i}: Failed to scrape (logged to error log)")
         
         # Delay between requests (except for the last one)
         if i < end:
@@ -173,6 +196,10 @@ def scrape_list(indices: list, delay: float = 1.0, mode: str = 'append'):
     if mode == 'scratch':
         clean_scratch_mode()
     
+    # Load error log indices once at the start
+    error_log_indices = get_error_log_indices()
+    logger.info(f"Loaded {len(error_log_indices)} indices from error log")
+    
     total = len(indices)
     success_count = 0
     failure_count = 0
@@ -181,11 +208,20 @@ def scrape_list(indices: list, delay: float = 1.0, mode: str = 'append'):
     logger.info(f"Starting batch scrape for {total} indices - Mode: {mode.upper()}")
     
     for idx, i in enumerate(indices, 1):
+        # Check if this index is in the error log
+        if i in error_log_indices:
+            skipped_count += 1
+            # Delete HTML file if it exists
+            delete_raw_html(i)
+            logger.info(f"Skipping index {i} (in error log, HTML deleted if existed) ({idx}/{total})")
+            print(f"⊘ Index {i}: Skipped (in error log)")
+            continue
+        
         # Check if we should skip this index (append mode only)
         if mode == 'append' and check_index_exists(i):
             skipped_count += 1
             logger.info(f"Skipping index {i} (already exists) ({idx}/{total})")
-            print(f"⊘ Index {i}: Skipped (already exists)")
+            print(f"⊘ Index {i}: Skipped (already processed)")
             continue
         
         action = "Overwriting" if mode == 'overwrite' and check_index_exists(i) else "Processing"
@@ -205,7 +241,7 @@ def scrape_list(indices: list, delay: float = 1.0, mode: str = 'append'):
                 print(f"✗ Index {i}: Failed to save to CSV")
         else:
             failure_count += 1
-            print(f"✗ Index {i}: Failed to scrape")
+            print(f"✗ Index {i}: Failed to scrape (logged to error log)")
         
         # Delay between requests (except for the last one)
         if idx < total:

@@ -41,15 +41,13 @@ COLUMNS = [
 ]
 
 
-def log_error_to_csv(index: int, error_type: str, error_message: str, details: str = "") -> bool:
+def log_error_to_csv(index: int, error_message: str) -> bool:
     """
     Log scraping errors to a CSV file for analysis.
     
     Args:
         index: The bushing index that failed
-        error_type: Type of error (e.g., 'HTTP_ERROR', 'PARSE_ERROR', 'NETWORK_ERROR')
-        error_message: Brief error message
-        details: Additional error details or stack trace
+        error_message: Descriptive error message
         
     Returns:
         True if logged successfully, False otherwise
@@ -60,9 +58,7 @@ def log_error_to_csv(index: int, error_type: str, error_message: str, details: s
         error_data = {
             'Timestamp': timestamp,
             'Index': index,
-            'Error_Type': error_type,
-            'Error_Message': error_message,
-            'Details': details
+            'Error_Message': error_message
         }
         
         # Create DataFrame
@@ -71,12 +67,17 @@ def log_error_to_csv(index: int, error_type: str, error_message: str, details: s
         # Append to existing file or create new one
         try:
             existing_df = pd.read_csv(ERROR_LOG_CSV)
-            combined_df = pd.concat([existing_df, df], ignore_index=True)
-            combined_df.to_csv(ERROR_LOG_CSV, index=False)
+            # Check if this index already exists in error log
+            if index not in existing_df['Index'].values:
+                combined_df = pd.concat([existing_df, df], ignore_index=True)
+                combined_df.to_csv(ERROR_LOG_CSV, index=False)
+                logger.info(f"Logged error for index {index}: {error_message}")
+            else:
+                logger.debug(f"Index {index} already in error log")
         except FileNotFoundError:
             df.to_csv(ERROR_LOG_CSV, index=False)
+            logger.info(f"Created error log and logged index {index}: {error_message}")
         
-        logger.error(f"Logged error for index {index} to {ERROR_LOG_CSV}")
         return True
         
     except Exception as e:
@@ -116,10 +117,57 @@ def save_raw_html(html_content: str, index: int, directory: str = RAW_DATA_DIR) 
         return False
 
 
+def delete_raw_html(index: int, directory: str = RAW_DATA_DIR) -> bool:
+    """
+    Delete raw HTML file for a given index.
+    Used to clean up files for indices with errors.
+    
+    Args:
+        index: The bushing index number
+        directory: Directory containing the file (default: RAW_DATA_DIR)
+        
+    Returns:
+        True if successful or file doesn't exist, False on error
+    """
+    try:
+        filename = f"Hitachi_website_bushing_{index}.html"
+        filepath = os.path.join(directory, filename)
+        
+        if os.path.exists(filepath):
+            os.remove(filepath)
+            logger.info(f"Deleted raw HTML file: {filepath}")
+            return True
+        else:
+            logger.debug(f"HTML file not found (already deleted): {filepath}")
+            return True
+        
+    except Exception as e:
+        logger.error(f"Error deleting raw HTML for index {index}: {e}")
+        return False
+
+
+def get_error_log_indices() -> set:
+    """
+    Load all indices from the error log CSV.
+    
+    Returns:
+        Set of indices that have errors
+    """
+    try:
+        if os.path.exists(ERROR_LOG_CSV):
+            df = pd.read_csv(ERROR_LOG_CSV)
+            return set(df['Index'].values)
+        return set()
+    except Exception as e:
+        logger.warning(f"Error reading error log: {e}")
+        return set()
+
+
 def scrape_bushing_data(index: int) -> Optional[Dict[str, str]]:
     """
     Scrape bushing data for a given index from the Hitachi Energy website.
     Enhanced with comprehensive error handling and logging for large-scale automation.
+    Only saves HTML files when valid data is found.
     
     Args:
         index: The bushing index number to scrape
@@ -147,26 +195,31 @@ def scrape_bushing_data(index: int) -> Optional[Dict[str, str]]:
         
         # Check for HTTP errors
         if response.status_code == 404:
-            log_error_to_csv(index, 'HTTP_404', 'Page not found', f'URL: {url}')
+            log_error_to_csv(index, 'Page not found (HTTP 404)')
             logger.warning(f"Index {index} not found (404)")
+            delete_raw_html(index)  # Clean up any existing file
             return None
         elif response.status_code == 403:
-            log_error_to_csv(index, 'HTTP_403', 'Access forbidden', f'URL: {url}')
+            log_error_to_csv(index, 'Access forbidden (HTTP 403)')
             logger.warning(f"Access forbidden for index {index} (403)")
+            delete_raw_html(index)  # Clean up any existing file
             return None
         
         response.raise_for_status()
         
         # Check if response has content
         if not response.text or len(response.text) < 100:
-            log_error_to_csv(index, 'EMPTY_RESPONSE', 'Response too short or empty', 
-                           f'Content length: {len(response.text) if response.text else 0}')
+            log_error_to_csv(index, 'Empty or too short response from server')
             logger.warning(f"Empty or invalid response for index {index}")
+            delete_raw_html(index)  # Clean up any existing file
             return None
         
-        # Save raw HTML response
-        if not save_raw_html(response.text, index):
-            logger.warning(f"Failed to save raw HTML for index {index}, but continuing...")
+        # Check for "No bushing found" message
+        if "No bushing found by that style number" in response.text:
+            log_error_to_csv(index, 'No bushing found by that style number')
+            logger.warning(f"No bushing found for index {index}")
+            delete_raw_html(index)  # Clean up any existing file
+            return None
         
         # Parse HTML
         soup = BeautifulSoup(response.content, 'lxml')
@@ -181,44 +234,50 @@ def scrape_bushing_data(index: int) -> Optional[Dict[str, str]]:
                        bushing_data.get("Replacement Information - ABB Style Number"))
             
             if has_data:
+                # Only save HTML if we have valid data
+                if not save_raw_html(response.text, index):
+                    logger.warning(f"Failed to save raw HTML for index {index}, but continuing...")
                 logger.info(f"Successfully scraped data for index {index}")
                 return bushing_data
             else:
-                log_error_to_csv(index, 'NO_DATA', 'All fields empty after parsing', 
-                               'Page loaded but no bushing data extracted')
+                log_error_to_csv(index, 'All fields empty - no bushing data extracted')
                 logger.warning(f"No valid data found for index {index}")
+                delete_raw_html(index)  # Clean up any existing file
                 return None
         else:
-            log_error_to_csv(index, 'PARSE_FAILED', 'Parser returned None', 
-                           'parse_bushing_info() returned None')
+            log_error_to_csv(index, 'HTML parser returned None - could not parse page')
             logger.warning(f"Parser failed for index {index}")
+            delete_raw_html(index)  # Clean up any existing file
             return None
     
     except requests.exceptions.Timeout:
-        log_error_to_csv(index, 'TIMEOUT', 'Request timeout after 30 seconds', f'URL: {url}')
+        log_error_to_csv(index, 'Request timeout after 30 seconds')
         logger.error(f"Timeout fetching data for index {index}")
+        delete_raw_html(index)  # Clean up any existing file
         return None
     
     except requests.exceptions.ConnectionError as e:
-        log_error_to_csv(index, 'CONNECTION_ERROR', 'Network connection error', str(e))
+        log_error_to_csv(index, f'Network connection error: {str(e)[:100]}')
         logger.error(f"Connection error for index {index}: {e}")
+        delete_raw_html(index)  # Clean up any existing file
         return None
     
     except requests.exceptions.HTTPError as e:
-        log_error_to_csv(index, 'HTTP_ERROR', f'HTTP error: {e.response.status_code}', str(e))
+        log_error_to_csv(index, f'HTTP error {e.response.status_code}: {str(e)[:100]}')
         logger.error(f"HTTP error for index {index}: {e}")
+        delete_raw_html(index)  # Clean up any existing file
         return None
     
     except requests.exceptions.RequestException as e:
-        error_details = traceback.format_exc()
-        log_error_to_csv(index, 'REQUEST_ERROR', 'Request exception', error_details)
+        log_error_to_csv(index, f'Request exception: {str(e)[:100]}')
         logger.error(f"Request exception for index {index}: {e}")
+        delete_raw_html(index)  # Clean up any existing file
         return None
     
     except Exception as e:
-        error_details = traceback.format_exc()
-        log_error_to_csv(index, 'UNKNOWN_ERROR', str(e), error_details)
+        log_error_to_csv(index, f'Unexpected error: {str(e)[:100]}')
         logger.error(f"Unexpected error for index {index}: {e}")
+        delete_raw_html(index)  # Clean up any existing file
         return None
 
 
