@@ -19,9 +19,11 @@ The scraper supports three write modes (default is `append`):
 
 | Mode | Flag | Behavior | Use Case |
 |------|------|----------|----------|
-| **Append** | `--mode append` | Skips indices that already exist (checks CSV + HTML) | Default, incremental data collection |
-| **Overwrite** | `--mode overwrite` | Overwrites existing data file-by-file | Update specific entries |
+| **Append** | `--mode append` | Skips indices in CSV, HTML, or error log | Default, incremental data collection |
+| **Overwrite** | `--mode overwrite` | Overwrites existing data, skips error log indices | Update specific entries |
 | **Scratch** | `--mode scratch` | Deletes ALL data and starts fresh | Complete reset ⚠️ |
+
+**Note**: All modes automatically skip indices in the error log and delete their HTML files if encountered.
 
 **Default behavior**: If you don't specify `--mode`, it will use `append` mode (skip existing data).
 
@@ -141,9 +143,9 @@ All files are created in the current directory (`hitachi_website_data_collection
 (Get-ChildItem hitachi_website_data_raw\cross_reference_data\*.html).Count
 ```
 
-**View error summary**:
+**View error summary** (count by message pattern):
 ```powershell
-Import-Csv hitachi_website_scraping_error_log.csv | Group-Object Error_Type | Format-Table Name, Count
+Import-Csv hitachi_website_scraping_error_log.csv | Group-Object { $_.Error_Message.Substring(0, [Math]::Min(30, $_.Error_Message.Length)) } | Format-Table Name, Count
 ```
 
 **View recent errors**:
@@ -156,13 +158,15 @@ Import-Csv hitachi_website_scraping_error_log.csv | Select-Object -Last 10 | For
 ## 💡 Tips
 
 1. **Always navigate to the website directory first** - prevents "file not found" errors
-2. **Use append mode by default** - automatically skips already-scraped indices
+2. **Use append mode by default** - automatically skips already-scraped indices and error log
 3. **Use delay 0.5-1.0 seconds** - be respectful to the server
 4. **Test with small range first** - verify everything works before large runs
-5. **Monitor error log** - helps identify problematic index ranges
-6. **Use overwrite mode sparingly** - only when you need to update specific entries
-7. **Use scratch mode with caution** - it deletes ALL existing data
-8. **Keep raw HTML files** - enables re-parsing if scraper logic improves
+5. **Monitor error log** - helps identify problematic index ranges and saves time
+6. **Error log is preserved** - never cleared between runs, provides performance benefit
+7. **Use overwrite mode sparingly** - only when you need to update specific entries
+8. **Use scratch mode with caution** - it deletes ALL existing data including error log
+9. **HTML files auto-cleanup** - error index HTML files deleted when encountered
+10. **Only valid data saved** - HTML files only for bushings with actual data (saves space)
 
 ---
 
@@ -175,4 +179,5 @@ Check the detailed documentation:
 
 ---
 
-**Last Updated**: February 10, 2026
+**Last Updated**: February 11, 2026  
+**Version**: 3.2 - Performance optimized with smart error log handling
