@@ -17,6 +17,13 @@ data_collection/
 │   ├── hitachi_website_scraping_error_log.csv
 │   ├── hitachi_website_data_raw/
 │   └── README.md
+├── hubbell_website_data_collection/        # Hubbell website scraper
+│   ├── hubbell_website_data_scraper.py
+│   ├── hubbell_website_data_batch_scraper.py
+│   ├── hubbell_website_bushing_master_list.csv
+│   ├── hubbell_website_scraping_error_log.csv
+│   ├── hubbell_website_data_raw/
+│   └── README.md
 ├── pcore_website_data_collection/          # PCORE website scraper (future)
 ├── <other_website>_data_collection/        # Additional scrapers (future)
 └── requirements.txt                        # Shared Python dependencies
@@ -45,6 +52,30 @@ python hitachi_website_data_batch_scraper.py --start 1 --end 100 --delay 0.5
 ```
 
 **Documentation**: See [hitachi_website_data_collection/README.md](hitachi_website_data_collection/README.md)
+
+### ✅ Hubbell Condenser Bushings
+
+**Status**: Fully operational (v1.0)  
+**Location**: `hubbell_website_data_collection/`  
+**Catalog Size**: ~2,680 bushings  
+**Architecture**: Listing-based scraping with auto-pagination  
+**Features**:
+- Automatic pagination detection (auto-discovers all pages)
+- Listing page scraping (15-20 bushings per page)
+- Smart catalog ID duplicate checking
+- Comprehensive error handling with timestamped CSV logging
+- Three write modes (append/overwrite/scratch)
+- Batch extraction for efficiency
+- Raw HTML archiving for listing pages
+- Detailed documentation
+
+**Quick Start**:
+```powershell
+cd hubbell_website_data_collection
+python hubbell_website_data_batch_scraper.py --all --delay 1.0
+```
+
+**Documentation**: See [hubbell_website_data_collection/README.md](hubbell_website_data_collection/README.md)
 
 ### 🔜 PCORE Website (Coming Soon)
 
@@ -92,6 +123,23 @@ All website collectors use the following shared dependencies (defined in `requir
 - **pandas 2.2.0**: CSV operations and data management
 
 ## Design Principles
+
+### Scraper Architectures
+
+The system supports two main scraper architectures:
+
+**Index-Based Scraping** (e.g., Hitachi):
+- Scrapes individual pages by sequential index numbers
+- One request per bushing
+- Ideal for: Cross-reference databases, parametric searches
+- Example: `https://example.com/bushing.asp?INDEX=42131`
+
+**Listing-Based Scraping** (e.g., Hubbell):
+- Scrapes catalog/listing pages with multiple products per page
+- One request extracts 15-20+ bushings
+- Automatic pagination detection
+- Ideal for: Product catalogs, e-commerce sites
+- Example: `https://example.com/products/bushings/c/559849?page=2`
 
 ### Modular Organization
 
@@ -243,6 +291,13 @@ Regular backups of:
 
 ## Version History
 
+**v3.3** (February 12, 2026)
+- Added Hubbell website scraper (listing-based architecture)
+- Automatic pagination detection for catalog-style websites
+- Smart catalog ID duplicate checking
+- Batch extraction for improved efficiency
+- Documentation for both scraper architecture types
+
 **v3.2** (February 11, 2026)
 - Error log format: Timestamp, Index, Error_Message (more descriptive)
 - Smart error handling: automatic skip of known error indices
@@ -280,8 +335,9 @@ For issues, questions, or to contribute new website collectors, contact the deve
 
 ---
 
-**Last Updated**: February 11, 2026  
-**System Version**: 3.2  
-**Active Collectors**: 1 (Hitachi Energy)  
+**Last Updated**: February 12, 2026  
+**System Version**: 3.3  
+**Active Collectors**: 2 (Hitachi Energy, Hubbell)  
+**Architecture Types**: Index-based, Listing-based  
 **Planned Collectors**: PCORE, additional manufacturers  
-**Performance**: Optimized with smart error handling and storage management
+**Performance**: Optimized with smart error handling, storage management, and efficient batch extraction
