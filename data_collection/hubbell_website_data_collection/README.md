@@ -1,6 +1,6 @@
 ﻿# Hubbell Bushing Data Collection
 
-**Complete dataset of 2,519 Condenser Bushing products from Hubbell (94.0% coverage)**
+**Complete dataset of 2,579 Condenser Bushing products from Hubbell (96.2% coverage)**
 
 > Part of the Electrical Bushing Data Collection System
 
@@ -15,8 +15,8 @@ python hubbell_website_algolia_scraper_kv_enhanced.py
 
 ### Output
 - **File**: `hubbell_website_bushing_master_list_complete.csv`
-- **Products**: 2,519 unique Condenser Bushings
-- **Brands**: PCORE Electric (1,075), Electro Composites (1,444)
+- **Products**: 2,579 unique Condenser Bushings
+- **Brands**: PCORE Electric (1,123), Electro Composites (1,456)
 - **Columns**: Website Link, Brand, Catalog Number
 
 ---
@@ -24,10 +24,10 @@ python hubbell_website_algolia_scraper_kv_enhanced.py
 ##  Project Overview
 
 ### What This Does
-Collects complete product data from Hubbell's Condenser Bushing catalog using their Algolia Search API with intelligent sub-filtering and gap-filling queries to maximize coverage.
+Collects complete product data from Hubbell's Condenser Bushing catalog using their Algolia Search API with combined multi-field filtering (kV Class + BIL + Current Rating) to maximize coverage.
 
 ### Key Achievement
-Successfully retrieved **94.0% of all products** (2,519 out of 2,680) using brand/kV Class filtering plus targeted rare kV class queries to capture products missed by standard filtering.
+Successfully retrieved **96.2% of all products** (2,579 out of 2,680) using combined kV Class, BIL, and Current Rating filtering to capture products across all field combinations.
 
 ---
 
@@ -66,8 +66,8 @@ Successfully retrieved **94.0% of all products** (2,519 out of 2,680) using bran
   - Runtime: ~45 seconds for full dataset
 
 ### Data Output
-- **`hubbell_website_bushing_master_list_complete.csv`** (316 KB)
-  - 2,519 unique products
+- **`hubbell_website_bushing_master_list_complete.csv`** (327 KB)
+  - 2,579 unique products
   - Three columns: Website Link, Brand, Catalog Number
   - No duplicates, validated data
 
@@ -110,21 +110,30 @@ python hubbell_website_algolia_scraper_kv_enhanced.py test
 ### By Brand
 | Brand | Products | Expected | Coverage |
 |-------|----------|----------|----------|
-| PCORE Electric | 1,075 | 1,224 | 87.8% |
-| Electro Composites | 1,444 | 1,456 | 99.2% |
-| **Total** | **2,519** | **2,680** | **94.0%** |
+| PCORE Electric | 1,123 | 1,224 | 91.7% |
+| Electro Composites | 1,456 | 1,456 | 100.0% |
+| **Total** | **2,579** | **2,680** | **96.2%** |
 
 ### By kV Class
 ### By kV Class
-- **Scraped**: 52 unique voltage classes (0.693 kV to 500 kV)
-- **Standard filtering**: 40 classes discovered via sampling
-- **Gap-filling**: 12 rare classes queried explicitly (23 products captured)
+- **Scraped**: 52 unique voltage classes (0.68 kV to 500 kV)
+- **Standard filtering**: 47 classes discovered via sampling
+- **Gap-filling**: 12 rare classes queried explicitly
 
-### Missing Products (161 total - 6.0%)
-1. **~48 products** - No kV Class field in API (cannot be queried)
-2. **~113 products** - API index inconsistencies or NULL fields
+### By BIL (Basic Impulse Level)
+- **Scraped**: 28 unique BIL values (110 kV to 1675 kV)
+- **Complementary filtering**: Captures products without kV Class
 
-**Note**: Gap-filling improved coverage from 93.1% to 94.0% (+23 products)
+### By Current Rating
+- **Scraped**: 89 unique current ratings (1 A to 10500 A)
+- **Final sweep**: Captures remaining products
+
+### Missing Products (101 total - 3.8%)
+1. **~40-50 products**: NULL for ALL queryable fields (kV, BIL, Current Rating)
+2. **~20-30 products**: API index inconsistencies or data quality issues
+3. **~20-30 products**: Soft-deleted or malformed data
+
+**Note**: Multi-field filtering improved coverage from 93.1% → 94.0% → 96.2%
 
 ---
 
@@ -151,12 +160,15 @@ kv_filter = f"{brand_filter} AND ''kV Class'':''25 kV''"
 
 | Metric | Value |
 |--------|-------|
-| Total products | 2,519 |
-| Execution time | ~68 seconds |
-| Products/second | ~37 |
-| API requests | ~280 (paginated) |
+| Total products | 2,579 |
+| Execution time | ~158 seconds |
+| Products/second | ~16 |
+| API requests | ~850 (paginated) |
 | Brands queried | 2 |
-| kV classes queried | 52 (40 standard + 12 gap-filling) |
+| Fields used | 3 (kV Class, BIL, Current Rating) |
+| Unique field values | 169 (52 + 28 + 89) |
+| Raw products collected | 7,340 |
+| Duplicates removed | 4,761 (64.9%) |
 | Success rate | 100% (no failed requests) |
 
 ---
@@ -239,13 +251,20 @@ python hubbell_website_algolia_scraper_kv_enhanced.py
 1. **Browser-based scraping has hard limits** - Infinite scroll causes DOM memory accumulation
 2. **Network traffic analysis reveals APIs** - Backend endpoints bypass frontend constraints
 3. **Sub-filtering conquers pagination** - Break large datasets into manageable chunks
-4. **94% coverage is excellent** - Remaining 6% likely inaccessible due to NULL fields or API inconsistencies
+4. **Multi-field filtering maximizes coverage** - Different products have different fields populated
+5. **96% coverage is excellent** - Remaining 4% likely inaccessible due to NULL fields
 
 ---
 
 ##  Version History
 
-**v2.1 - 2026-02-12** (Current)
+**v2.2 - 2026-02-13** (Current) ⭐
+- Multi-field filtering: kV Class + BIL + Current Rating
+- 2,579 products (96.2% coverage)
+- +60 products from v2.1 (37.3% gap reduction)
+- See `MULTI_FIELD_RESULTS.md` for details
+
+**v2.1 - 2026-02-12/13**
 - Gap-filling enhancement: +23 products captured
 - 2,519 products (94.0% coverage)
 - Queries 12 rare kV classes explicitly
@@ -278,6 +297,6 @@ For issues or questions:
 
 ---
 
-**Last Updated**: February 12, 2026  
+**Last Updated**: February 13, 2026  
 **Status**:  Production Ready  
-**Coverage**: 94.0% (2,519/2,680 products)
+**Coverage**: 96.2% (2,579/2,680 products)
