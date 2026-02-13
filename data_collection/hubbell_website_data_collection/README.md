@@ -1,6 +1,6 @@
 ﻿# Hubbell Bushing Data Collection
 
-**Complete dataset of 2,496 Condenser Bushing products from Hubbell (93.1% coverage)**
+**Complete dataset of 2,519 Condenser Bushing products from Hubbell (94.0% coverage)**
 
 > Part of the Electrical Bushing Data Collection System
 
@@ -15,8 +15,8 @@ python hubbell_website_algolia_scraper_kv_enhanced.py
 
 ### Output
 - **File**: `hubbell_website_bushing_master_list_complete.csv`
-- **Products**: 2,496 unique Condenser Bushings
-- **Brands**: PCORE Electric (1,072), Electro Composites (1,424)
+- **Products**: 2,519 unique Condenser Bushings
+- **Brands**: PCORE Electric (1,075), Electro Composites (1,444)
 - **Columns**: Website Link, Brand, Catalog Number
 
 ---
@@ -24,10 +24,10 @@ python hubbell_website_algolia_scraper_kv_enhanced.py
 ##  Project Overview
 
 ### What This Does
-Collects complete product data from Hubbell''s Condenser Bushing catalog using their Algolia Search API with intelligent sub-filtering to bypass pagination limits.
+Collects complete product data from Hubbell's Condenser Bushing catalog using their Algolia Search API with intelligent sub-filtering and gap-filling queries to maximize coverage.
 
 ### Key Achievement
-Successfully retrieved **93.1% of all products** (2,496 out of 2,680) by discovering and leveraging the backend API after initial browser-based approaches hit insurmountable memory limitations.
+Successfully retrieved **94.0% of all products** (2,519 out of 2,680) using brand/kV Class filtering plus targeted rare kV class queries to capture products missed by standard filtering.
 
 ---
 
@@ -66,8 +66,8 @@ Successfully retrieved **93.1% of all products** (2,496 out of 2,680) by discove
   - Runtime: ~45 seconds for full dataset
 
 ### Data Output
-- **`hubbell_website_bushing_master_list_complete.csv`** (309 KB)
-  - 2,496 unique products
+- **`hubbell_website_bushing_master_list_complete.csv`** (316 KB)
+  - 2,519 unique products
   - Three columns: Website Link, Brand, Catalog Number
   - No duplicates, validated data
 
@@ -110,19 +110,21 @@ python hubbell_website_algolia_scraper_kv_enhanced.py test
 ### By Brand
 | Brand | Products | Expected | Coverage |
 |-------|----------|----------|----------|
-| PCORE Electric | 1,072 | 1,224 | 87.6% |
-| Electro Composites | 1,424 | 1,456 | 97.8% |
-| **Total** | **2,496** | **2,680** | **93.1%** |
+| PCORE Electric | 1,075 | 1,224 | 87.8% |
+| Electro Composites | 1,444 | 1,456 | 99.2% |
+| **Total** | **2,519** | **2,680** | **94.0%** |
 
 ### By kV Class
-- **Scraped**: 40 unique voltage classes (15 kV to 500 kV)
-- **Missing**: 12 rare voltage classes (23 products total)
-- **NULL kV Class**: 48 products without voltage classification
+### By kV Class
+- **Scraped**: 52 unique voltage classes (0.693 kV to 500 kV)
+- **Standard filtering**: 40 classes discovered via sampling
+- **Gap-filling**: 12 rare classes queried explicitly (23 products captured)
 
-### Missing Products (184 total - 6.9%)
-1. **48 products** - No kV Class field in API
-2. **23 products** - Rare kV classes not discovered during sampling
-3. **113 products** - Likely untagged brands or API inconsistencies
+### Missing Products (161 total - 6.0%)
+1. **~48 products** - No kV Class field in API (cannot be queried)
+2. **~113 products** - API index inconsistencies or NULL fields
+
+**Note**: Gap-filling improved coverage from 93.1% to 94.0% (+23 products)
 
 ---
 
@@ -149,12 +151,12 @@ kv_filter = f"{brand_filter} AND ''kV Class'':''25 kV''"
 
 | Metric | Value |
 |--------|-------|
-| Total products | 2,496 |
-| Execution time | ~45 seconds |
-| Products/second | ~55 |
-| API requests | ~250 (paginated) |
+| Total products | 2,519 |
+| Execution time | ~68 seconds |
+| Products/second | ~37 |
+| API requests | ~280 (paginated) |
 | Brands queried | 2 |
-| kV classes queried | 47 |
+| kV classes queried | 52 (40 standard + 12 gap-filling) |
 | Success rate | 100% (no failed requests) |
 
 ---
@@ -237,13 +239,19 @@ python hubbell_website_algolia_scraper_kv_enhanced.py
 1. **Browser-based scraping has hard limits** - Infinite scroll causes DOM memory accumulation
 2. **Network traffic analysis reveals APIs** - Backend endpoints bypass frontend constraints
 3. **Sub-filtering conquers pagination** - Break large datasets into manageable chunks
-4. **93% coverage is excellent** - Remaining 7% likely inaccessible or inconsistent in API
+4. **94% coverage is excellent** - Remaining 6% likely inaccessible due to NULL fields or API inconsistencies
 
 ---
 
 ##  Version History
 
-**v2.0 - 2026-02-12** (Current)
+**v2.1 - 2026-02-12** (Current)
+- Gap-filling enhancement: +23 products captured
+- 2,519 products (94.0% coverage)
+- Queries 12 rare kV classes explicitly
+- See `ENHANCED_RESULTS.md` for details
+
+**v2.0 - 2026-02-12**
 - kV Class enhanced API scraping
 - 2,496 products (93.1% coverage)
 - Cleaned up debug code and documentation
@@ -272,4 +280,4 @@ For issues or questions:
 
 **Last Updated**: February 12, 2026  
 **Status**:  Production Ready  
-**Coverage**: 93.1% (2,496/2,680 products)
+**Coverage**: 94.0% (2,519/2,680 products)

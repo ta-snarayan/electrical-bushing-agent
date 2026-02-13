@@ -2,7 +2,9 @@
 
 ## Executive Summary
 
-Successfully collected **2,496 unique Condenser Bushing products** from Hubbell's website using Algolia API scraping with kV Class sub-filtering, achieving **93.1% coverage** of all available products.
+Successfully collected **2,519 unique Condenser Bushing products** from Hubbell's website using Algolia API scraping with kV Class sub-filtering plus gap-filling enhancement, achieving **94.0% coverage** of all available products.
+
+**Latest Enhancement (v2.1)**: Added targeted queries for 12 rare kV classes, capturing an additional 23 products (+0.9% coverage improvement from v2.0's 93.1%). See [ENHANCED_RESULTS.md](ENHANCED_RESULTS.md) for full details.
 
 ---
 
@@ -22,9 +24,13 @@ Successfully collected **2,496 unique Condenser Bushing products** from Hubbell'
 - **Status**: Significant improvement but still incomplete
 - **Output**: `hubbell_website_bushing_master_list_api.csv`
 
-### Method 3: Algolia API - kV Class Enhanced ✅ **RECOMMENDED**
-- **Technology**: Brand + kV Class sub-filtering to bypass pagination
-- **Results**: **2,496 unique products (93.1% coverage)**
+### Method 3: Algolia API - kV Class Enhanced + Gap-Filling ✅ **RECOMMENDED**
+- **Technology**: Brand + kV Class sub-filtering plus targeted rare kV class queries
+- **Results**: **2,519 unique products (94.0% coverage)**
+- **Enhancements (v2.1)**:
+  - Queries 12 rare kV classes explicitly (0.693 kV to 300 kV)
+  - Captured 23 additional products not found in standard filtering
+  - Total 52 kV classes queried (40 discovered + 12 explicit)
 - **Advantages**:
   - Bypasses 1,000-product per-query limit
   - No browser memory constraints
@@ -38,14 +44,14 @@ Successfully collected **2,496 unique Condenser Bushing products** from Hubbell'
 
 | Metric | Value |
 |--------|-------|
-| **Total products collected** | 2,496 |
+| **Total products collected** | 2,519 |
 | **API total available** | 2,680 |
-| **Coverage** | 93.1% |
-| **Missing products** | 184 (6.9%) |
+| **Coverage** | 94.0% |
+| **Missing products** | 161 (6.0%) |
 
 ### Brand Distribution
-- **PCORE Electric**: 1,072 products (87.6% of 1,224 expected)
-- **Electro Composites**: 1,424 products (97.8% of 1,456 expected)
+- **PCORE Electric**: 1,075 products (87.8% of 1,224 expected)
+- **Electro Composites**: 1,444 products (99.2% of 1,456 expected)
 
 ### kV Class Coverage
 - **Scraped**: 40 unique kV Class values
@@ -111,8 +117,8 @@ URL: https://www.hubbell.com/hubbell/en/products/46-kv-hollow-core-epoxy-bushing
    - Brand filtering only
 
 3. **`hubbell_website_bushing_master_list_complete.csv`** ⭐ **RECOMMENDED**
-   - 2,496 products (93.1% coverage)
-   - kV Class enhanced filtering
+   - 2,519 products (94.0% coverage)
+   - kV Class enhanced filtering + gap-filling
 
 ### Scripts
 1. **`hubbell_website_data_scraper.py`** - Selenium-based scraper
@@ -137,8 +143,8 @@ URL: https://www.hubbell.com/hubbell/en/products/46-kv-hollow-core-epoxy-bushing
 ## Usage Recommendations
 
 ### For Most Use Cases
-Use **`hubbell_website_bushing_master_list_complete.csv`** with 2,496 products:
-- Highest coverage (93.1%)
+Use **`hubbell_website_bushing_master_list_complete.csv`** with 2,519 products:
+- Highest coverage (94.0%)
 - Clean, deduplicated data
 - No memory/browser limitations
 - Consistent data quality
@@ -146,7 +152,7 @@ Use **`hubbell_website_bushing_master_list_complete.csv`** with 2,496 products:
 ### For Development/Testing
 Use **`hubbell_website_algolia_scraper_kv_enhanced.py`**:
 ```bash
-# Full scrape (93.1% coverage)
+# Full scrape (94.0% coverage with gap-filling)
 python hubbell_website_algolia_scraper_kv_enhanced.py
 
 # Test mode (verify connectivity)
@@ -182,7 +188,7 @@ missing_kv_classes = ['0.693 kV', '13.8 kV', '14.4 kV', ...]for kv in missing_kv
 ### Performance Metrics
 - **Selenium scrape**: ~30 seconds for 915 products (30 products/sec before crash)
 - **API scrape (basic)**: ~11 seconds for 2,000 products (182 products/sec)
-- **API scrape (kV enhanced)**: ~45 seconds for 2,496 products (55 products/sec with sub-filtering overhead)
+- **API scrape (kV enhanced)**: ~68 seconds for 2,519 products (37 products/sec with sub-filtering and gap-filling)
 
 ### Best Practices
 - Always inspect network traffic for backend APIs before complex DOM parsing
@@ -227,10 +233,11 @@ missing_kv_classes = ['0.693 kV', '13.8 kV', '14.4 kV', ...]for kv in missing_kv
 
 ## Conclusion
 
-The Hubbell website data collection successfully retrieved **93.1% of all Condenser Bushing products** (2,496 out of 2,680) using an innovative approach combining:
+The Hubbell website data collection successfully retrieved **94.0% of all Condenser Bushing products** (2,519 out of 2,680) using an innovative approach combining:
 1. Network traffic analysis to discover backend APIs
 2. Brand-based filtering to bypass initial pagination limits
-3. kV Class sub-filtering to maximize coverage beyond basic queries
+3. kV Class sub-filtering to maximize standard coverage
+4. **Gap-filling queries** targeting 12 rare kV classes to capture additional 23 products
 
 The resulting dataset provides comprehensive coverage of both major brands (PCORE Electric and Electro Composites) with clean, structured data suitable for analysis, cross-referencing, and integration with other systems.
 

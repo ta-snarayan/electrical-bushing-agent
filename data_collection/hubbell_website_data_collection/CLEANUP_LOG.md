@@ -4,6 +4,8 @@
 **Action**: Comprehensive cleanup and consolidation  
 **Result**: Reduced from 27 files to 4 essential files (85% reduction)
 
+> **Note**: This log documents the v2.0 cleanup (27 → 4 files). After cleanup, v2.1 gap-filling enhancement was added, improving coverage from 2,496 (93.1%) to 2,519 products (94.0%). See [ENHANCED_RESULTS.md](ENHANCED_RESULTS.md) for details.
+
 ---
 
 ## Summary

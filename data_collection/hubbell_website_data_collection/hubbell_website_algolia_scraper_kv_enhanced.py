@@ -232,6 +232,89 @@ def scrape_with_kv_filtering(brand: str, all_products: List[Dict]) -> int:
     return brand_product_count
 
 
+def scrape_missing_products(all_products: List[Dict]) -> int:
+    """
+    Attempt to capture products missed by standard brand+kV filtering.
+    
+    Targets:
+    1. Products without kV Class field (NULL/empty)
+    2. Rare kV Class values not discovered during sampling
+    3. Products without brand tags
+    
+    Args:
+        all_products: List to append found products to
+    
+    Returns:
+        Number of additional products found
+    """
+    logger.info(f"\n{'='*60}")
+    logger.info("Attempting to capture missing products...")
+    logger.info(f"{'='*60}")
+    
+    initial_count = len(all_products)
+    
+    # Known missing kV classes from analysis (12 values, 23 products expected)
+    missing_kv_classes = [
+        '0.693 kV', '13.8 kV', '14.4 kV', '22 kV', '23 kV', '24.5 kV',
+        '245 kV', '30 kV', '300 kV', '4 kV', '44 kV', '92 kV'
+    ]
+    
+    brands = ["PCORE Electric", "Electro Composites"]
+    
+    # Strategy 1: Query each missing kV class
+    logger.info(f"\n1. Querying {len(missing_kv_classes)} rare kV classes...")
+    for kv_class in missing_kv_classes:
+        for brand in brands:
+            filter_str = f"{CATEGORY_FILTER} AND Brands:'{brand}' AND 'kV Class':'{kv_class}'"
+            
+            try:
+                response = search_products(category_filter=filter_str, hits_per_page=100, page=0)
+                if response and 'results' in response:
+                    hits = response['results'][0].get('hits', [])
+                    if hits:
+                        logger.info(f"  Found {len(hits)} products for {brand} - {kv_class}")
+                        for hit in hits:
+                            product = parse_algolia_product(hit)
+                            if product:
+                                all_products.append(product)
+                time.sleep(0.2)
+            except Exception as e:
+                logger.error(f"  Error querying {brand} - {kv_class}: {e}")
+                continue
+    
+    # Strategy 2: Try products without brand filter (catch untagged/other brands)
+    logger.info(f"\n2. Querying products without brand filter...")
+    try:
+        # Query category only, no brand filter
+        response = search_products(category_filter=CATEGORY_FILTER, hits_per_page=100, page=0)
+        if response and 'results' in response:
+            results = response['results'][0]
+            total_no_brand_filter = results.get('nbHits', 0)
+            logger.info(f"  Total with category-only filter: {total_no_brand_filter}")
+            
+            # Sample first few pages to find products not matching known brands
+            for page in range(min(5, results.get('nbPages', 0))):
+                response = search_products(category_filter=CATEGORY_FILTER, hits_per_page=100, page=page)
+                if response and 'results' in response:
+                    hits = response['results'][0].get('hits', [])
+                    for hit in hits:
+                        brand = hit.get('Brand', '').strip()
+                        # Check if brand is not one of the known brands
+                        if brand and brand not in brands:
+                            logger.info(f"  Found product from unexpected brand: {brand}")
+                            product = parse_algolia_product(hit)
+                            if product:
+                                all_products.append(product)
+                    time.sleep(0.3)
+    except Exception as e:
+        logger.error(f"  Error querying without brand filter: {e}")
+    
+    additional_found = len(all_products) - initial_count
+    logger.info(f"\n✓ Found {additional_found} additional products using gap-filling queries")
+    
+    return additional_found
+
+
 def scrape_all_products_complete(output_file: str = "hubbell_website_bushing_master_list_complete.csv") -> int:
     """
     Scrape ALL condenser bushing products using kV Class sub-filtering
@@ -240,7 +323,8 @@ def scrape_all_products_complete(output_file: str = "hubbell_website_bushing_mas
     This function will retrieve all 2,680+ products by:
     1. Splitting queries by brand (PCORE Electric, Electro Composites)
     2. Further splitting each brand by kV Class
-    3. Ensuring no single query exceeds 1,000 products
+    3. Querying missing rare kV classes
+    4. Attempting to capture untagged/other brand products
     
     Args:
         output_file: Output CSV filename
@@ -259,6 +343,9 @@ def scrape_all_products_complete(output_file: str = "hubbell_website_bushing_mas
     
     for brand in brands:
         scrape_with_kv_filtering(brand, all_products)
+    
+    # NEW: Attempt to capture missing products
+    scrape_missing_products(all_products)
     
     # Save to CSV with deduplication
     if all_products:
@@ -286,13 +373,24 @@ def scrape_all_products_complete(output_file: str = "hubbell_website_bushing_mas
         
         # Print summary
         print(f"\n{'='*80}")
-        print(f"COMPLETE SCRAPING FINISHED")
+        print(f"COMPLETE SCRAPING FINISHED (with gap-filling)")
         print(f"{'='*80}")
         print(f"Total products retrieved: {original_count}")
         print(f"Unique products saved: {len(df)}")
-        print(f"Target products: 2680+")
+        print(f"Target products: 2680")
         print(f"Coverage: {len(df)/2680*100:.1f}%")
-        print(f"Output file: {output_file}")
+        
+        if len(df) < 2680:
+            missing = 2680 - len(df)
+            print(f"Missing: {missing} products ({missing/2680*100:.1f}%)")
+            print(f"\nPossible reasons for missing products:")
+            print(f"  • Products with NULL/empty fields not queryable via API")
+            print(f"  • API index inconsistencies (count vs actual results)")
+            print(f"  • Soft-deleted or hidden products in index")
+        else:
+            print(f"✓✓ COMPLETE COVERAGE ACHIEVED! ✓✓")
+        
+        print(f"\nOutput file: {output_file}")
         print(f"\nSample (first product):")
         if len(df) > 0:
             first = df.iloc[0]
