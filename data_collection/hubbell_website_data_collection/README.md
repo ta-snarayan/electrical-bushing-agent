@@ -252,17 +252,20 @@ python hubbell_website_algolia_scraper_kv_enhanced.py
 2. **Network traffic analysis reveals APIs** - Backend endpoints bypass frontend constraints
 3. **Sub-filtering conquers pagination** - Break large datasets into manageable chunks
 4. **Multi-field filtering maximizes coverage** - Different products have different fields populated
-5. **96% coverage is excellent** - Remaining 4% likely inaccessible due to NULL fields
+5. **96% coverage is the practical maximum** - Remaining 4% have NULL for ALL filterable fields
+6. **API permissions are restrictive** - Only kV, BIL, and Current Rating are filterable (tested +exhausted)
 
 ---
 
 ##  Version History
 
-**v2.2 - 2026-02-13** (Current) ⭐
+**v2.2 - 2026-02-13** (Current - FINAL) ⭐
 - Multi-field filtering: kV Class + BIL + Current Rating
-- 2,579 products (96.2% coverage)
+- 2,579 products (96.2% coverage) - **Maximum API capacity**
 - +60 products from v2.1 (37.3% gap reduction)
-- See `MULTI_FIELD_RESULTS.md` for details
+- Remaining 101 products have NULL for all filterable fields
+- Testing confirmed: Additional facets return 403 Forbidden (API limitation)
+- See `FINAL_COVERAGE_ANALYSIS.md` for complete testing results
 
 **v2.1 - 2026-02-12/13**
 - Gap-filling enhancement: +23 products captured
