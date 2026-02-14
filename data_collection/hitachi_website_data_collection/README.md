@@ -122,12 +122,6 @@ python hitachi_website_data_batch_scraper.py --start 1 --end 100 --delay 0.5 --m
 ```powershell
 python hitachi_website_data_batch_scraper.py --start 1 --end 100 --delay 0.5 --mode scratch
 ```
-```powershell
-python hitachi_website_data_batch_scraper.py --start 1 --end 50000 --delay 0.5
-```
-```powershell
-python hitachi_website_data_batch_scraper.py --start 1 --end 50000 --delay 0.5
-```
 
 #### Creating an Index File
 
@@ -145,7 +139,63 @@ Then run:
 python hitachi_website_data_batch_scraper.py --file indices.txt
 ```
 
+## Catalog Data Collection (Phase 2)
+
+After collecting cross-reference data, you can enrich the ABB style numbers with detailed catalog specifications.
+
+### Overview
+
+**Phase 1 (Cross-Reference)** collects Original → ABB replacement mappings  
+**Phase 2 (Catalog)** enriches ABB style numbers with 53 detailed specification fields
+
+This two-phase approach:
+1. First identifies the 1,364 unique ABB bushings
+2. Then collects comprehensive technical specifications for each
+
+### Quick Start - Catalog Scraping
+
+**Step 1: Initialize catalog master list**
+```powershell
+python hitachi_website_catalog_batch_scraper.py --initialize
+```
+
+This extracts 1,364 unique ABB style numbers from the cross-reference master list and creates `hitachi_website_bushing_catalog_master_list.csv`.
+
+**Step 2: Scrape catalog data**
+```powershell
+# Scrape all 1,364 style numbers
+python hitachi_website_catalog_batch_scraper.py --all --delay 0.5
+
+# Or test with a single bushing first
+python hitachi_website_catalog_scraper.py 138W0800XA
+
+# Or scrape specific style numbers
+python hitachi_website_catalog_batch_scraper.py --styles 138W0800XA,196W1620UW --delay 0.5
+```
+
+### Catalog Data Features
+
+- **53 Specification Fields**: Complete technical data including:
+  - Basic info (catalog #, delivery, price)
+  - Insulator type and color
+  - Electrical ratings (voltage, BIL, current, capacitance)
+  - Physical dimensions (lengths, diameters, weight)
+  - Terminal specifications (top and bottom)
+  - Flange mounting details
+  - Special features
+- **Smart Initialization**: Automatically extracts unique ABB styles from Phase 1 results
+- **Same Write Modes**: append/overwrite/scratch modes for flexible workflow
+- **Independent Storage**: Separate CSV, error log, and HTML archive from Phase 1
+
+### Documentation
+
+For complete catalog scraping documentation, see:
+- **[Catalog Data Collection README](CATALOG_DATA_COLLECTION_README.md)** - Full usage guide
+- **[Catalog Scraper Architecture](CATALOG_SCRAPER_ARCHITECTURE.md)** - Technical details
+
 ### Output
+
+Phase 1 (Cross-Reference) Output:
 
 The scraper will:
 1. Fetch data from: `https://bushing.hitachienergy.com/Scripts/BushingCrossReferenceBU.asp?INDEX=<index>`
@@ -424,17 +474,27 @@ python hitachi_website_data_batch_scraper.py --start 1 --end 10 --delay 0.5
 
 ```
 hitachi_website_data_collection/
-├── hitachi_website_data_scraper.py          # Core scraper module
-├── hitachi_website_data_batch_scraper.py    # Batch processing script
-├── hitachi_website_bushing_master_list.csv  # Output CSV (created after run)
-├── hitachi_website_scraping_error_log.csv   # Error log (created if errors occur)
-├── hitachi_website_data_raw/                # Raw HTML archive
-│   └── cross_reference_data/
-│       ├── Hitachi_website_bushing_1.html
-│       ├── Hitachi_website_bushing_2.html
-│       └── ...
-├── README.md                                # This file
-└── test_results.md                          # Detailed test results
+├── Phase 1: Cross-Reference Scraping
+│   ├── hitachi_website_data_scraper.py          # Core scraper module
+│   ├── hitachi_website_data_batch_scraper.py    # Batch processing script
+│   ├── hitachi_website_bushing_master_list.csv  # Output: 7,100+ cross-references
+│   ├── hitachi_website_scraping_error_log.csv   # Phase 1 error log
+│   └── hitachi_website_data_raw/cross_reference_data/  # Phase 1 HTML archives
+│
+├── Phase 2: Catalog Data Scraping (NEW)
+│   ├── hitachi_website_catalog_scraper.py       # Catalog scraper module
+│   ├── hitachi_website_catalog_batch_scraper.py # Batch catalog processor
+│   ├── hitachi_website_bushing_catalog_master_list.csv  # Output: 1,364 detailed specs
+│   ├── hitachi_website_catalog_scraping_error_log.csv   # Phase 2 error log
+│   └── hitachi_website_data_raw/catalog_data/   # Phase 2 HTML archives
+│
+└── Documentation
+    ├── README.md                                # This file (main overview)
+    ├── CATALOG_DATA_COLLECTION_README.md        # Phase 2 complete guide
+    ├── CATALOG_SCRAPER_ARCHITECTURE.md          # Technical architecture (Phase 2)
+    ├── PERFORMANCE_IMPROVEMENTS.md              # Phase 1 optimizations
+    ├── QUICK_START.md                           # Quick reference guide
+    └── VERIFICATION_REPORT.md                   # Test results and validation
 ```
 
 ## Future Enhancements
@@ -442,7 +502,8 @@ hitachi_website_data_collection/
 Potential improvements for future versions:
 - ~~Batch processing: Accept multiple indices in one run~~ ✅ **Added in v1.1**
 - ~~Error logging: CSV error log for large-scale automation~~ ✅ **Added in v2.0**
-- Duplicate detection: Skip already-scraped indices
+- ~~Catalog data collection: Detailed specifications for ABB bushings~~ ✅ **Added in v4.0**
+- Duplicate detection: Enhanced skip logic for efficiency
 - Parallel scraping: Process multiple indices simultaneously
 - GUI interface: User-friendly interface for non-technical users
 - Auto-retry: Automatic retry on network failures with exponential backoff
@@ -450,7 +511,18 @@ Potential improvements for future versions:
 - Database support: Option to save to database instead of CSV
 
 ## Version History
+4.0** (February 13, 2026) - **Catalog Data Collection Added**
+- **NEW: Phase 2 catalog scraping system**
+- Added `hitachi_website_catalog_scraper.py` for detailed specifications
+- Added `hitachi_website_catalog_batch_scraper.py` for batch catalog processing
+- Extracts 1,364 unique ABB style numbers from cross-reference data
+- Collects 53 specification fields per bushing
+- Complete catalog documentation (README + Architecture guide)
+- Independent storage: separate CSV, error log, HTML archive
+- Same robust features: append/overwrite/scratch modes, error handling
+- Two-phase data collection pipeline: cross-reference → catalog enrichment
 
+**v
 **v3.2** (February 11, 2026)
 - **Error log format updated**: Timestamp, Index, Error_Message (more descriptive)
 - **Removed automatic cleanup on startup** - more controlled behavior
@@ -498,9 +570,9 @@ Potential improvements for future versions:
 - CSV output with proper column formatting
 - Browser-like headers for anti-bot bypass
 - Comprehensive logging
-
-## License
-
+3, 2026  
+**Version**: 4.0  
+**Latest Features**: Catalog data collection (Phase 2), 53 specification fields, two-phase pipeline
 Internal use only - Electrical Bushing Data Collection System
 
 ## Contact
